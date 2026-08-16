@@ -1,0 +1,39 @@
+{
+  "name": "placeprep-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PlacePrep - Production-grade college placement interview experience platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently --kill-others -n \"SERVER,CLIENT\" -c \"blue.bold,magenta.bold\" \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "npm run dev --workspace=apps/client",
+    "dev:server": "npm run dev --workspace=apps/server",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "db:push": "npx prisma db push --schema=apps/server/prisma/schema.prisma",
+    "db:seed": "npm run prisma:seed --workspace=apps/server",
+    "prisma:generate": "npx prisma generate --schema=apps/server/prisma/schema.prisma"
+  },
+  "keywords": [
+    "placement-prep",
+    "interview-experiences",
+    "dsa",
+    "system-design",
+    "college-recruitment",
+    "fullstack",
+    "typescript",
+    "react",
+    "express",
+    "postgresql",
+    "supabase"
+  ],
+  "author": "Vidhan",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}
