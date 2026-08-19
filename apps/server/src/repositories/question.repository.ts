@@ -3,7 +3,7 @@ import { QuestionQueryParams, QuestionDTO } from '@placeprep/shared';
 
 export class QuestionRepository {
   async findAll(params: QuestionQueryParams) {
-    const { query, categoryId, topic, difficulty, companyId, page, limit } = params;
+    const { query, categoryId, topic, difficulty, companyId, companyName, page, limit } = params;
     const skip = (page - 1) * limit;
 
     const where: any = {
@@ -17,13 +17,33 @@ export class QuestionRepository {
     if (categoryId) where.categoryId = categoryId;
     if (topic) where.topicTag = { contains: topic, mode: 'insensitive' };
     if (difficulty) where.difficulty = difficulty;
-    if (companyId) where.round.experience.companyId = companyId;
+    if (companyId) {
+      where.round.experience.companyId = companyId;
+    }
+    if (companyName) {
+      where.round = {
+        ...where.round,
+        experience: {
+          ...where.round?.experience,
+          company: {
+            name: { contains: companyName, mode: 'insensitive' },
+          },
+        },
+      };
+    }
 
     if (query) {
       where.OR = [
         { questionText: { contains: query, mode: 'insensitive' } },
         { answerApproach: { contains: query, mode: 'insensitive' } },
         { topicTag: { contains: query, mode: 'insensitive' } },
+        {
+          round: {
+            experience: {
+              company: { name: { contains: query, mode: 'insensitive' } },
+            },
+          },
+        },
       ];
     }
 

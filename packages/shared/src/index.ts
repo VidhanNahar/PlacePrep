@@ -161,15 +161,39 @@ export interface QuestionDTO {
   roleTitle?: string;
 }
 
+export const ROUND_TYPES_PRESETS: { label: string; value: string }[] = [
+  { label: 'Online Assessment (OA)', value: 'ONLINE_ASSESSMENT' },
+  { label: 'Technical Coding / DSA', value: 'TECHNICAL' },
+  { label: 'System Design (LLD / HLD)', value: 'SYSTEM_DESIGN' },
+  { label: 'Managerial Round', value: 'MANAGERIAL' },
+  { label: 'HR & Behavioral', value: 'HR' },
+  { label: 'Group Discussion (GD)', value: 'GROUP_DISCUSSION' },
+  { label: 'Take Home Assignment / Project', value: 'TAKE_HOME_PROJECT' },
+  { label: 'Other', value: 'OTHER' },
+];
+
+export const createRoundTypeSchema = z.object({
+  name: z.string().min(2, 'Round type name is required').max(100),
+  description: z.string().max(500).optional(),
+});
+export type CreateRoundTypeInput = z.infer<typeof createRoundTypeSchema>;
+
+export interface RoundTypeDTO {
+  id?: string;
+  name: string;
+  value: string;
+  isCustom?: boolean;
+}
+
 // --- Rounds ---
 export const roundInputSchema = z.object({
   id: z.string().optional(),
   roundNumber: z.number().int().min(1).max(15),
-  roundName: z.string().min(2, 'Round name is required').max(150),
-  roundType: z.nativeEnum(RoundType),
+  roundName: z.string().optional().default(''),
+  roundType: z.string().min(1, 'Round type is required').max(100),
   difficulty: z.nativeEnum(DifficultyLevel),
-  durationMinutes: z.number().int().positive().optional(),
-  description: z.string().min(10, 'Round description must be at least 10 characters'),
+  durationMinutes: z.number().int().positive().optional().nullable(),
+  description: z.string().optional().default(''),
   questions: z.array(questionInputSchema).default([]),
 });
 export type RoundInput = z.infer<typeof roundInputSchema>;
@@ -179,7 +203,7 @@ export interface RoundDTO {
   experienceId: string;
   roundNumber: number;
   roundName: string;
-  roundType: RoundType;
+  roundType: string;
   difficulty: DifficultyLevel;
   durationMinutes?: number | null;
   description: string;
@@ -194,13 +218,13 @@ export const createExperienceSchema = z.object({
   expType: z.nativeEnum(ExperienceType),
   batchYear: z.number().int().min(2018).max(2030),
   placementCycleYear: z.number().int().min(2018).max(2030),
-  outcome: z.nativeEnum(SelectionStatus),
+  outcome: z.nativeEnum(SelectionStatus).optional().nullable(),
   overallDifficulty: z.nativeEnum(DifficultyLevel),
   totalRounds: z.number().int().min(1).max(15),
-  compensationCtc: z.number().positive().optional(),
-  location: z.string().max(150).optional(),
-  overview: z.string().min(30, 'Overview must be at least 30 characters explaining the hiring process'),
-  preparationTips: z.string().optional().or(z.literal('')),
+  compensationCtc: z.number().positive().optional().nullable(),
+  location: z.string().max(150).optional().nullable(),
+  overview: z.string().optional().nullable().or(z.literal('')),
+  preparationTips: z.string().optional().nullable().or(z.literal('')),
   isAnonymous: z.boolean().default(false),
   rounds: z.array(roundInputSchema).min(1, 'At least one interview round must be provided'),
 });
@@ -220,7 +244,7 @@ export interface ExperienceDTO {
   expType: ExperienceType;
   batchYear: number;
   placementCycleYear: number;
-  outcome: SelectionStatus;
+  outcome?: SelectionStatus | null;
   overallDifficulty: DifficultyLevel;
   totalRounds: number;
   compensationCtc?: number | null;
@@ -261,6 +285,7 @@ export const questionQuerySchema = z.object({
   topic: z.string().optional(),
   difficulty: z.nativeEnum(DifficultyLevel).optional(),
   companyId: z.string().optional(),
+  companyName: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });

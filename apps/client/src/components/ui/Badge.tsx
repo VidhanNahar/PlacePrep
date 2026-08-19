@@ -56,7 +56,8 @@ export const DifficultyBadge: React.FC<{ difficulty: DifficultyLevel }> = ({ dif
   return <Badge variant={item.variant}>{item.label}</Badge>;
 };
 
-export const OutcomeBadge: React.FC<{ outcome: SelectionStatus }> = ({ outcome }) => {
+export const OutcomeBadge: React.FC<{ outcome?: SelectionStatus | null }> = ({ outcome }) => {
+  if (!outcome) return null;
   const map: Record<SelectionStatus, { label: string; variant: BadgeProps['variant'] }> = {
     SELECTED: { label: 'Selected', variant: 'success' },
     REJECTED: { label: 'Rejected', variant: 'danger' },
@@ -68,17 +69,21 @@ export const OutcomeBadge: React.FC<{ outcome: SelectionStatus }> = ({ outcome }
   return <Badge variant={item.variant}>{item.label}</Badge>;
 };
 
-export const RoundTypeBadge: React.FC<{ type: RoundType }> = ({ type }) => {
-  const map: Record<RoundType, { label: string; variant: BadgeProps['variant'] }> = {
+export const RoundTypeBadge: React.FC<{ type: string }> = ({ type }) => {
+  const map: Record<string, { label: string; variant: BadgeProps['variant'] }> = {
     ONLINE_ASSESSMENT: { label: 'Online Assessment', variant: 'info' },
     TECHNICAL: { label: 'Technical Round', variant: 'purple' },
     SYSTEM_DESIGN: { label: 'System Design', variant: 'purple' },
     MANAGERIAL: { label: 'Managerial', variant: 'warning' },
     HR: { label: 'HR / Behavioral', variant: 'success' },
     GROUP_DISCUSSION: { label: 'GD', variant: 'default' },
+    TAKE_HOME_PROJECT: { label: 'Take Home Project', variant: 'info' },
     OTHER: { label: 'Interview', variant: 'default' },
   };
 
-  const item = map[type] || { label: type, variant: 'default' };
+  const item = map[type] || { 
+    label: type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()), 
+    variant: 'purple' 
+  };
   return <Badge variant={item.variant}>{item.label}</Badge>;
 };
