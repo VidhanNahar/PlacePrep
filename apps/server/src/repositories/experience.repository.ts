@@ -125,23 +125,23 @@ export class ExperienceRepository {
           expType: data.expType,
           batchYear: data.batchYear,
           placementCycleYear: data.placementCycleYear,
-          outcome: data.outcome,
+          outcome: data.outcome || null,
           overallDifficulty: data.overallDifficulty,
           totalRounds: data.totalRounds,
           compensationCtc: data.compensationCtc ? Number(data.compensationCtc) : null,
           location: data.location || null,
-          overview: data.overview,
+          overview: data.overview || 'Interview Experience Overview',
           preparationTips: data.preparationTips || null,
           isAnonymous: data.isAnonymous || false,
           status: 'PENDING_REVIEW',
           rounds: {
             create: data.rounds.map((round) => ({
               roundNumber: round.roundNumber,
-              roundName: round.roundName,
+              roundName: round.roundName || round.roundType.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) || `Round ${round.roundNumber}`,
               roundType: round.roundType,
               difficulty: round.difficulty,
               durationMinutes: round.durationMinutes || null,
-              description: round.description,
+              description: round.description || '',
               questions: {
                 create: (round.questions || []).map((q) => ({
                   categoryId: q.categoryId,

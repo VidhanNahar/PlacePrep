@@ -55,10 +55,26 @@ export class CompanyRepository {
   }
 
   async create(data: CreateCompanyInput) {
-    const slug = slugify(data.name, { lower: true, strict: true });
+    const trimmedName = data.name.trim();
+    const slug = slugify(trimmedName, { lower: true, strict: true }) || trimmedName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+    // Check if company already exists by name or slug (case-insensitive)
+    const existing = await prisma.company.findFirst({
+      where: {
+        OR: [
+          { name: { equals: trimmedName, mode: 'insensitive' } },
+          { slug: { equals: slug, mode: 'insensitive' } },
+        ],
+      },
+    });
+
+    if (existing) {
+      return this.mapToDTO(existing);
+    }
+
     const company = await prisma.company.create({
       data: {
-        name: data.name,
+        name: trimmedName,
         slug,
         websiteUrl: data.websiteUrl || null,
         logoUrl: data.logoUrl || null,

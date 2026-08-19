@@ -10,10 +10,12 @@ export const QuestionsHub: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [categories, setCategories] = useState<any[]>([]);
+  const [companies, setCompanies] = useState<any[]>([]);
   const [questions, setQuestions] = useState<QuestionDTO[]>([]);
   const [query, setQuery] = useState(searchParams.get('query') || '');
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
   const [selectedDifficulty, setSelectedDifficulty] = useState(searchParams.get('difficulty') || '');
+  const [selectedCompany, setSelectedCompany] = useState(searchParams.get('companyId') || '');
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -23,6 +25,10 @@ export const QuestionsHub: React.FC = () => {
   useEffect(() => {
     api.get('/questions/categories').then((res: any) => {
       if (res.success) setCategories(res.data);
+    }).catch(console.error);
+
+    api.get('/companies?limit=100').then((res: any) => {
+      if (res.success) setCompanies(res.data);
     }).catch(console.error);
   }, []);
 
@@ -34,6 +40,7 @@ export const QuestionsHub: React.FC = () => {
         if (query) params.set('query', query);
         if (selectedCategory) params.set('categoryId', selectedCategory);
         if (selectedDifficulty) params.set('difficulty', selectedDifficulty);
+        if (selectedCompany) params.set('companyId', selectedCompany);
         params.set('page', String(page));
         params.set('limit', '25');
 
@@ -51,11 +58,21 @@ export const QuestionsHub: React.FC = () => {
     };
 
     fetchQuestions();
-  }, [query, selectedCategory, selectedDifficulty, page]);
+  }, [query, selectedCategory, selectedDifficulty, selectedCompany, page]);
 
   const toggleAccordion = (id: string) => {
     setOpenQuestionIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
+
+  const handleResetFilters = () => {
+    setQuery('');
+    setSelectedCategory('');
+    setSelectedDifficulty('');
+    setSelectedCompany('');
+    setPage(1);
+  };
+
+  const hasActiveFilters = Boolean(query || selectedCategory || selectedDifficulty || selectedCompany);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -65,13 +82,13 @@ export const QuestionsHub: React.FC = () => {
           Placement Interview Question Bank
         </h1>
         <p className="text-sm text-slate-400 mt-1">
-          Explore real questions asked across DSA, OOP, DBMS, OS, Computer Networks, and System Design.
+          Explore real questions asked across DSA, OOP, DBMS, OS, Computer Networks, System Design, and specific companies.
         </p>
       </div>
 
       {/* Filter Toolbar */}
-      <div className="glass-panel p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+      <div className="glass-panel p-4 rounded-xl border border-slate-800 flex flex-col md:flex-row flex-wrap items-stretch md:items-center gap-3">
+        <div className="relative flex-1 min-w-[220px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
           <input
             type="text"
@@ -80,20 +97,38 @@ export const QuestionsHub: React.FC = () => {
               setQuery(e.target.value);
               setPage(1);
             }}
-            placeholder="Search questions by topic tag or problem text..."
+            placeholder="Search questions or company..."
             className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
           />
         </div>
 
+        {/* Company Filter Dropdown */}
+        <select
+          value={selectedCompany}
+          onChange={(e) => {
+            setSelectedCompany(e.target.value);
+            setPage(1);
+          }}
+          className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500 min-w-[160px]"
+        >
+          <option value="">All Companies</option>
+          {companies.map((comp) => (
+            <option key={comp.id} value={comp.id}>
+              {comp.name}
+            </option>
+          ))}
+        </select>
+
+        {/* Category Filter */}
         <select
           value={selectedCategory}
           onChange={(e) => {
             setSelectedCategory(e.target.value);
             setPage(1);
           }}
-          className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
+          className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500 min-w-[160px]"
         >
-          <option value="">All Topics / Categories</option>
+          <option value="">All Categories</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name} ({c.totalQuestions})
@@ -101,13 +136,14 @@ export const QuestionsHub: React.FC = () => {
           ))}
         </select>
 
+        {/* Difficulty Filter */}
         <select
           value={selectedDifficulty}
           onChange={(e) => {
             setSelectedDifficulty(e.target.value);
             setPage(1);
           }}
-          className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
+          className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500 min-w-[140px]"
         >
           <option value="">All Difficulties</option>
           <option value="EASY">Easy</option>
@@ -115,6 +151,18 @@ export const QuestionsHub: React.FC = () => {
           <option value="HARD">Hard</option>
           <option value="VERY_HARD">Very Hard</option>
         </select>
+
+        {hasActiveFilters && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleResetFilters}
+            className="flex-shrink-0 text-xs"
+          >
+            Reset
+          </Button>
+        )}
       </div>
 
       {/* Question Accordion List */}
