@@ -1,9 +1,20 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+
+// Mock localStorage in Node test environment
+const storageMap = new Map<string, string>();
+const localStorageMock = {
+  getItem: (key: string) => storageMap.get(key) || null,
+  setItem: (key: string, value: string) => storageMap.set(key, value),
+  removeItem: (key: string) => storageMap.delete(key),
+  clear: () => storageMap.clear(),
+};
+(globalThis as any).localStorage = localStorageMock;
+
 import { api } from '../lib/api.js';
 
 describe('Client API Interceptor Test Suite', () => {
   beforeEach(() => {
-    localStorage.clear();
+    localStorageMock.clear();
   });
 
   it('should have base configuration set', () => {
@@ -11,7 +22,7 @@ describe('Client API Interceptor Test Suite', () => {
   });
 
   it('should attach Authorization Bearer header when token is present in localStorage', async () => {
-    localStorage.setItem('placeprep_auth_token', 'test-jwt-token-123');
+    localStorageMock.setItem('placeprep_auth_token', 'test-jwt-token-123');
 
     // Simulate request interceptor
     const config: any = { headers: {} };

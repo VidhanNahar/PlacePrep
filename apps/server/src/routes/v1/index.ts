@@ -6,6 +6,7 @@ import { questionRoutes } from './question.routes.js';
 import { commentRoutes } from './comment.routes.js';
 import { adminRoutes } from './admin.routes.js';
 import { analyticsRoutes } from './analytics.routes.js';
+import { roundTypeRoutes } from './roundType.routes.js';
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use('/questions', questionRoutes);
 router.use('/comments', commentRoutes);
 router.use('/admin', adminRoutes);
 router.use('/analytics', analyticsRoutes);
+router.use('/round-types', roundTypeRoutes);
 
 export const v1Router = router;

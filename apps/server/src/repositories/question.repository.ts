@@ -4,6 +4,7 @@ import { QuestionQueryParams, QuestionDTO } from '@placeprep/shared';
 export class QuestionRepository {
   async findAll(params: QuestionQueryParams) {
     const { query, categoryId, topic, difficulty, companyId, companyName, page, limit } = params;
+    const { query, categoryId, topic, difficulty, companyId, companyName, page, limit } = params;
     const skip = (page - 1) * limit;
 
     const where: any = {
@@ -27,6 +28,13 @@ export class QuestionRepository {
         { questionText: { contains: query, mode: 'insensitive' } },
         { answerApproach: { contains: query, mode: 'insensitive' } },
         { topicTag: { contains: query, mode: 'insensitive' } },
+        {
+          round: {
+            experience: {
+              company: { name: { contains: query, mode: 'insensitive' } },
+            },
+          },
+        },
       ];
     }
 
