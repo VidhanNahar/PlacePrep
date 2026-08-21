@@ -19,7 +19,7 @@ export class CommentRepository {
       orderBy: { createdAt: 'desc' },
     });
 
-    return comments.map(this.mapToDTO);
+    return comments.map((c) => this.mapToDTO(c));
   }
 
   async create(userId: string, experienceId: string, data: CreateCommentInput) {

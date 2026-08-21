@@ -30,7 +30,7 @@ export class CompanyRepository {
     ]);
 
     return {
-      companies: companies.map(this.mapToDTO),
+      companies: companies.map((c) => this.mapToDTO(c)),
       total,
       totalPages: Math.ceil(total / limit),
     };
