@@ -1,5 +1,6 @@
 import { prisma } from '../db/client.js';
 import { CreateCompanyInput, CompanyDTO } from '@placeprep/shared';
+import { ConflictError } from '../errors/AppError.js';
 import slugify from 'slugify';
 
 export class CompanyRepository {
@@ -56,6 +57,16 @@ export class CompanyRepository {
 
   async create(data: CreateCompanyInput) {
     const slug = slugify(data.name, { lower: true, strict: true });
+    const existing = await prisma.company.findFirst({
+      where: {
+        OR: [{ name: { equals: data.name, mode: 'insensitive' } }, { slug }],
+      },
+    });
+
+    if (existing) {
+      throw new ConflictError(`Company '${data.name}' already exists.`);
+    }
+
     const company = await prisma.company.create({
       data: {
         name: data.name,

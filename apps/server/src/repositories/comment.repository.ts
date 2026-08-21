@@ -1,5 +1,6 @@
 import { prisma } from '../db/client.js';
-import { CreateCommentInput, CommentDTO } from '@placeprep/shared';
+import { CreateCommentInput, CommentDTO, UserRole } from '@placeprep/shared';
+import { NotFoundError, ForbiddenError } from '../errors/AppError.js';
 
 export class CommentRepository {
   async findByExperienceId(experienceId: string) {
@@ -42,7 +43,22 @@ export class CommentRepository {
     });
   }
 
-  async delete(commentId: string) {
+  async delete(commentId: string, userId: string, userRole: UserRole) {
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId },
+    });
+
+    if (!comment) {
+      throw new NotFoundError('Comment not found');
+    }
+
+    const isAuthor = comment.userId === userId;
+    const isModeratorOrAdmin = userRole === 'MODERATOR' || userRole === 'ADMIN';
+
+    if (!isAuthor && !isModeratorOrAdmin) {
+      throw new ForbiddenError('You do not have permission to delete this comment');
+    }
+
     return prisma.comment.update({
       where: { id: commentId },
       data: { isDeleted: true, content: '[This comment was deleted]' },

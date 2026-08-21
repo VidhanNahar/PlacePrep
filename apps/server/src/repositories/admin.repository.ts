@@ -1,5 +1,7 @@
 import { prisma } from '../db/client.js';
 import { SubmissionStatus, ReportStatus } from '@placeprep/shared';
+import { NotFoundError } from '../errors/AppError.js';
+import { cacheService } from '../services/cache.service.js';
 
 export class AdminRepository {
   async getSubmissions(status: SubmissionStatus, page: number, limit: number) {
@@ -40,6 +42,14 @@ export class AdminRepository {
     rejectionReason?: string
   ) {
     return prisma.$transaction(async (tx) => {
+      const existing = await tx.interviewExperience.findUnique({
+        where: { id },
+      });
+
+      if (!existing) {
+        throw new NotFoundError('Interview experience not found');
+      }
+
       const exp = await tx.interviewExperience.update({
         where: { id },
         data: {
@@ -51,11 +61,16 @@ export class AdminRepository {
         include: { company: true },
       });
 
-      // If approved, increment company's total experiences count
-      if (status === 'APPROVED') {
+      // If transition to APPROVED, increment company's total experiences count
+      if (status === 'APPROVED' && existing.status !== 'APPROVED') {
         await tx.company.update({
           where: { id: exp.companyId },
           data: { totalExperiencesCount: { increment: 1 } },
+        });
+      } else if (existing.status === 'APPROVED' && status !== 'APPROVED') {
+        await tx.company.update({
+          where: { id: exp.companyId },
+          data: { totalExperiencesCount: { decrement: 1 } },
         });
       }
 
@@ -70,6 +85,7 @@ export class AdminRepository {
         },
       });
 
+      await cacheService.delPattern('analytics:*');
       return exp;
     });
   }
@@ -108,6 +124,14 @@ export class AdminRepository {
     action?: 'DELETE_CONTENT' | 'DISMISS'
   ) {
     return prisma.$transaction(async (tx) => {
+      const existing = await tx.report.findUnique({
+        where: { id },
+      });
+
+      if (!existing) {
+        throw new NotFoundError('Report not found');
+      }
+
       const report = await tx.report.update({
         where: { id },
         data: {
@@ -125,6 +149,13 @@ export class AdminRepository {
             data: { isDeleted: true, content: '[This comment was removed by a moderator]' },
           });
         } else if (report.experienceId) {
+          const exp = await tx.interviewExperience.findUnique({ where: { id: report.experienceId } });
+          if (exp && exp.status === 'APPROVED') {
+            await tx.company.update({
+              where: { id: exp.companyId },
+              data: { totalExperiencesCount: { decrement: 1 } },
+            });
+          }
           await tx.interviewExperience.update({
             where: { id: report.experienceId },
             data: { status: 'ARCHIVED' },
@@ -143,6 +174,7 @@ export class AdminRepository {
         },
       });
 
+      await cacheService.delPattern('analytics:*');
       return report;
     });
   }

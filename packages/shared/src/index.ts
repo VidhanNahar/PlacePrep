@@ -161,6 +161,16 @@ export interface QuestionDTO {
   roleTitle?: string;
 }
 
+export const ROUND_TYPES_PRESETS: { label: string; value: RoundType }[] = [
+  { label: 'Online Assessment (OA)', value: RoundType.ONLINE_ASSESSMENT },
+  { label: 'Technical Coding / DSA', value: RoundType.TECHNICAL },
+  { label: 'System Design (LLD / HLD)', value: RoundType.SYSTEM_DESIGN },
+  { label: 'Managerial Round', value: RoundType.MANAGERIAL },
+  { label: 'HR & Behavioral', value: RoundType.HR },
+  { label: 'Group Discussion (GD)', value: RoundType.GROUP_DISCUSSION },
+  { label: 'Other', value: RoundType.OTHER },
+];
+
 // --- Rounds ---
 export const roundInputSchema = z.object({
   id: z.string().optional(),

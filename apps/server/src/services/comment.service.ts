@@ -1,5 +1,5 @@
 import { commentRepository } from '../repositories/comment.repository.js';
-import { CreateCommentInput } from '@placeprep/shared';
+import { CreateCommentInput, UserRole } from '@placeprep/shared';
 
 export class CommentService {
   async getCommentsByExperience(experienceId: string) {
@@ -10,8 +10,8 @@ export class CommentService {
     return commentRepository.create(userId, experienceId, data);
   }
 
-  async deleteComment(commentId: string) {
-    return commentRepository.delete(commentId);
+  async deleteComment(commentId: string, userId: string, userRole: UserRole) {
+    return commentRepository.delete(commentId, userId, userRole);
   }
 }
 

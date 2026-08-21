@@ -3,7 +3,7 @@ import { QuestionQueryParams, QuestionDTO } from '@placeprep/shared';
 
 export class QuestionRepository {
   async findAll(params: QuestionQueryParams) {
-    const { query, categoryId, topic, difficulty, companyId, page, limit } = params;
+    const { query, categoryId, topic, difficulty, companyId, companyName, page, limit } = params;
     const skip = (page - 1) * limit;
 
     const where: any = {
@@ -18,6 +18,9 @@ export class QuestionRepository {
     if (topic) where.topicTag = { contains: topic, mode: 'insensitive' };
     if (difficulty) where.difficulty = difficulty;
     if (companyId) where.round.experience.companyId = companyId;
+    if (companyName) {
+      where.round.experience.company = { name: { contains: companyName, mode: 'insensitive' } };
+    }
 
     if (query) {
       where.OR = [

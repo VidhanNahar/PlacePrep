@@ -5,6 +5,7 @@ import {
   ExperienceDTO,
   SubmissionStatus,
 } from '@placeprep/shared';
+import { NotFoundError } from '../errors/AppError.js';
 
 export class ExperienceRepository {
   async findAll(params: ExperienceQueryParams, currentUserId?: string) {
@@ -170,6 +171,13 @@ export class ExperienceRepository {
 
   async toggleUpvote(userId: string, experienceId: string) {
     return prisma.$transaction(async (tx) => {
+      const exp = await tx.interviewExperience.findUnique({
+        where: { id: experienceId },
+      });
+      if (!exp) {
+        throw new NotFoundError('Interview experience not found');
+      }
+
       const existing = await tx.upvote.findUnique({
         where: { userId_experienceId: { userId, experienceId } },
       });
@@ -197,6 +205,13 @@ export class ExperienceRepository {
   }
 
   async toggleBookmark(userId: string, experienceId: string) {
+    const exp = await prisma.interviewExperience.findUnique({
+      where: { id: experienceId },
+    });
+    if (!exp) {
+      throw new NotFoundError('Interview experience not found');
+    }
+
     const existing = await prisma.bookmark.findUnique({
       where: { userId_experienceId: { userId, experienceId } },
     });

@@ -33,20 +33,20 @@ export const authenticate = async (req: Request, _res: Response, next: NextFunct
 
     const token = authHeader.split(' ')[1];
 
-    // Development fallback if testing with mock token
-    if (env.NODE_ENV === 'development' && token.startsWith('mock-dev-token:')) {
+    // Development & Test fallback if testing with mock token
+    if ((env.NODE_ENV === 'development' || env.NODE_ENV === 'test') && token.startsWith('mock-dev-token:')) {
       const email = token.split(':')[1] || 'student@thapar.edu';
       let user = await prisma.user.findUnique({ where: { email } });
       if (!user) {
         user = await prisma.user.create({
           data: {
-            authId: '00000000-0000-0000-0000-000000000001',
+            authId: crypto.randomUUID(),
             email,
             fullName: 'Dev Test User',
             collegeName: 'Thapar Institute of Engineering & Technology',
             graduationYear: 2026,
             branch: 'Computer Science',
-            role: 'ADMIN',
+            role: email.includes('admin') ? 'ADMIN' : email.includes('mod') ? 'MODERATOR' : 'STUDENT',
             isVerified: true,
           },
         });

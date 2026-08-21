@@ -13,7 +13,7 @@
     "dev:server": "npm run dev --workspace=apps/server",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
+    "test": "vitest run",
     "db:push": "npx prisma db push --schema=apps/server/prisma/schema.prisma",
     "db:seed": "npm run prisma:seed --workspace=apps/server",
     "prisma:generate": "npx prisma generate --schema=apps/server/prisma/schema.prisma"
