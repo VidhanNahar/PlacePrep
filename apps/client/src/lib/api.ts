@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+let rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || '/api/v1').trim();
+if (rawBaseUrl.endsWith('/')) {
+  rawBaseUrl = rawBaseUrl.slice(0, -1);
+}
+// Automatically ensure /api/v1 is appended if user provided the host URL without it
+const baseURL = rawBaseUrl.endsWith('/api/v1') ? rawBaseUrl : `${rawBaseUrl}/api/v1`;
 
 export const api = axios.create({
   baseURL,

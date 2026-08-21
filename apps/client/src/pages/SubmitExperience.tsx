@@ -7,14 +7,11 @@ import {
   DifficultyLevel,
   ExperienceType,
   SelectionStatus,
+  RoundType,
   RoundInput,
   QuestionInput,
-  RoundTypeDTO,
-  ROUND_TYPES_PRESETS,
 } from '@placeprep/shared';
 import { Button } from '../components/ui/Button';
-import { SearchableSelect } from '../components/ui/SearchableSelect';
-import { AddCompanyModal } from '../components/companies/AddCompanyModal';
 import {
   Plus,
   Trash2,
@@ -34,10 +31,6 @@ export const SubmitExperience: React.FC = () => {
 
   const [companies, setCompanies] = useState<CompanyDTO[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-  const [roundTypes, setRoundTypes] = useState<RoundTypeDTO[]>(
-    ROUND_TYPES_PRESETS.map((p) => ({ name: p.label, value: p.value, isCustom: false }))
-  );
-  const [isAddCompanyModalOpen, setIsAddCompanyModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -48,7 +41,7 @@ export const SubmitExperience: React.FC = () => {
   const [expType, setExpType] = useState<ExperienceType>('ON_CAMPUS');
   const [batchYear, setBatchYear] = useState(2025);
   const [placementCycleYear, setPlacementCycleYear] = useState(2024);
-  const [outcome, setOutcome] = useState<SelectionStatus | ''>('SELECTED');
+  const [outcome, setOutcome] = useState<SelectionStatus>('SELECTED');
   const [overallDifficulty, setOverallDifficulty] = useState<DifficultyLevel>('MEDIUM');
   const [compensationCtc, setCompensationCtc] = useState<number | undefined>(undefined);
   const [location, setLocation] = useState('Bangalore / Hybrid');
@@ -70,7 +63,7 @@ export const SubmitExperience: React.FC = () => {
   ]);
 
   useEffect(() => {
-    // Fetch companies, categories, and round types for form dropdowns
+    // Fetch companies and categories for form dropdowns
     api.get('/companies?limit=100').then((res: any) => {
       if (res.success) setCompanies(res.data);
     }).catch(console.error);
@@ -78,48 +71,7 @@ export const SubmitExperience: React.FC = () => {
     api.get('/questions/categories').then((res: any) => {
       if (res.success) setCategories(res.data);
     }).catch(console.error);
-
-    api.get('/round-types').then((res: any) => {
-      if (res.success && Array.isArray(res.data)) {
-        setRoundTypes(res.data);
-      }
-    }).catch(console.error);
   }, []);
-
-  const handleCompanyCreated = (newCompany: CompanyDTO) => {
-    setCompanies((prev) => [newCompany, ...prev]);
-    setCompanyId(newCompany.id);
-  };
-
-  const handleCreateCustomRoundType = async (roundIndex: number, customName: string) => {
-    const slug = customName.toLowerCase().replace(/[^a-z0-9]/g, '_');
-    const newType: RoundTypeDTO = {
-      name: customName,
-      value: slug,
-      isCustom: true,
-    };
-
-    // Update round types list locally immediately
-    setRoundTypes((prev) => {
-      if (prev.some((t) => t.value === slug || t.name.toLowerCase() === customName.toLowerCase())) {
-        return prev;
-      }
-      return [...prev, newType];
-    });
-
-    // Update the active round's roundType
-    updateRound(roundIndex, 'roundType', slug);
-
-    // Save to server for all future users if authenticated
-    try {
-      const res: any = await api.post('/round-types', { name: customName });
-      if (res.success && res.data) {
-        updateRound(roundIndex, 'roundType', res.data.value);
-      }
-    } catch (err) {
-      console.warn('Failed to persist custom round type to backend, kept locally:', err);
-    }
-  };
 
   const addRound = () => {
     const nextRoundNum = rounds.length + 1;
@@ -199,6 +151,11 @@ export const SubmitExperience: React.FC = () => {
       return;
     }
 
+    if (overview.length < 30) {
+      setError('Please provide a more descriptive hiring overview (at least 30 characters).');
+      return;
+    }
+
     setError(null);
     setIsSubmitting(true);
 
@@ -209,7 +166,7 @@ export const SubmitExperience: React.FC = () => {
         expType,
         batchYear: Number(batchYear),
         placementCycleYear: Number(placementCycleYear),
-        outcome: outcome ? (outcome as SelectionStatus) : undefined,
+        outcome,
         overallDifficulty,
         totalRounds: rounds.length,
         compensationCtc: compensationCtc ? Number(compensationCtc) : undefined,
@@ -283,31 +240,22 @@ export const SubmitExperience: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Company */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-slate-300">
-                  Company Name *
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setIsAddCompanyModalOpen(true)}
-                  className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Add New Company
-                </button>
-              </div>
-              <SearchableSelect
-                options={companies.map((c) => ({
-                  label: c.name,
-                  value: c.id,
-                  subtitle: c.industry || undefined,
-                }))}
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Company Name *
+              </label>
+              <select
+                required
                 value={companyId}
-                onChange={setCompanyId}
-                placeholder="-- Search or Select Company --"
-                searchPlaceholder="Type company name to filter..."
-                onOpenAddNewModal={() => setIsAddCompanyModalOpen(true)}
-                modalTriggerLabel="+ Company not listed? Add New Company"
-              />
+                onChange={(e) => setCompanyId(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500"
+              >
+                <option value="">-- Select Company --</option>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Role Title */}
@@ -345,14 +293,13 @@ export const SubmitExperience: React.FC = () => {
             {/* Outcome */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Final Result / Outcome (Optional)
+                Final Result / Outcome *
               </label>
               <select
                 value={outcome}
-                onChange={(e) => setOutcome(e.target.value as SelectionStatus | '')}
+                onChange={(e) => setOutcome(e.target.value as SelectionStatus)}
                 className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500"
               >
-                <option value="">-- Result Pending / Not Disclosed (Optional) --</option>
                 <option value="SELECTED">Selected (Received Offer)</option>
                 <option value="REJECTED">Rejected</option>
                 <option value="WAITLISTED">Waitlisted</option>
@@ -470,31 +417,34 @@ export const SubmitExperience: React.FC = () => {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-1">
+                  <label className="block text-xs text-slate-400 mb-1">Round Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={round.roundName}
+                    onChange={(e) => updateRound(rIdx, 'roundName', e.target.value)}
+                    placeholder="e.g. OA, Technical Round 1"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Round Type *</label>
-                  <SearchableSelect
-                    options={roundTypes.map((rt) => ({
-                      label: rt.name,
-                      value: rt.value,
-                    }))}
+                  <select
                     value={round.roundType}
-                    onChange={(val) => {
-                      const matched = roundTypes.find((rt) => rt.value === val);
-                      const updated = [...rounds];
-                      updated[rIdx] = {
-                        ...updated[rIdx],
-                        roundType: val,
-                        roundName: matched?.name || val.replace(/_/g, ' '),
-                      };
-                      setRounds(updated);
-                    }}
-                    placeholder="Select round type..."
-                    searchPlaceholder="Search or type custom round..."
-                    allowCustom={true}
-                    addNewButtonLabel="Add new round type"
-                    onAddNew={(customName) => handleCreateCustomRoundType(rIdx, customName)}
-                  />
+                    onChange={(e) => updateRound(rIdx, 'roundType', e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="ONLINE_ASSESSMENT">Online Assessment (OA)</option>
+                    <option value="TECHNICAL">Technical Coding / DSA</option>
+                    <option value="SYSTEM_DESIGN">System Design (LLD / HLD)</option>
+                    <option value="MANAGERIAL">Managerial</option>
+                    <option value="HR">HR & Behavioral</option>
+                    <option value="GROUP_DISCUSSION">Group Discussion</option>
+                    <option value="OTHER">Other</option>
+                  </select>
                 </div>
 
                 <div>
@@ -513,68 +463,16 @@ export const SubmitExperience: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Round Experience & Flow (Optional)</label>
+                <label className="block text-xs text-slate-400 mb-1">Round Experience & Flow *</label>
                 <textarea
                   rows={2}
+                  required
                   value={round.description}
                   onChange={(e) => updateRound(rIdx, 'description', e.target.value)}
                   placeholder="How did the round start? Was it live coding or conceptual discussion? Duration?"
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500 resize-none"
                 />
               </div>
-
-
-
-        {/* Step 3: Process Summary & Preparation Tips (Optional) */}
-        <section className="glass-panel p-6 md:p-8 rounded-2xl border border-slate-800 space-y-6">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-indigo-400" />
-            3. Process Summary & Preparation Tips (Optional)
-          </h2>
-
-          {/* Hiring Overview */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Hiring Process Summary & Overview (Optional)
-            </label>
-            <textarea
-              rows={4}
-              value={overview}
-              onChange={(e) => setOverview(e.target.value)}
-              placeholder="Describe the recruitment drive: shortlisting criteria, number of candidates who appeared, general atmosphere..."
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"
-            />
-          </div>
-
-          {/* Preparation Tips */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Preparation Tips & Advice for Juniors (Optional)
-            </label>
-            <textarea
-              rows={3}
-              value={preparationTips}
-              onChange={(e) => setPreparationTips(e.target.value)}
-              placeholder="Which topics to practice most? Resources used? Advice on answering behavioral / HR questions..."
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"
-            />
-          </div>
-
-          {/* Anonymous toggle */}
-          <div className="flex items-center gap-3 pt-2 border-t border-slate-800">
-            <input
-              type="checkbox"
-              id="anonymous"
-              checked={isAnonymous}
-              onChange={(e) => setIsAnonymous(e.target.checked)}
-              className="w-4 h-4 rounded text-indigo-600 bg-slate-950 border-slate-800 focus:ring-indigo-500"
-            />
-            <label htmlFor="anonymous" className="text-xs text-slate-300 flex items-center gap-1.5 cursor-pointer">
-              <EyeOff className="w-3.5 h-3.5 text-indigo-400" />
-              Publish anonymously (your name will be hidden from students, visible only to verified moderators)
-            </label>
-          </div>
-        </section>
 
               {/* Questions within this round */}
               <div className="pt-3 border-t border-slate-800/80 space-y-3">
@@ -679,6 +577,57 @@ export const SubmitExperience: React.FC = () => {
           ))}
         </section>
 
+        {/* Step 3: Process Summary & Preparation Tips (Optional) */}
+        <section className="glass-panel p-6 md:p-8 rounded-2xl border border-slate-800 space-y-6">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-indigo-400" />
+            3. Process Summary & Preparation Tips (Optional)
+          </h2>
+
+          {/* Hiring Overview */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Hiring Process Summary & Overview (Optional)
+            </label>
+            <textarea
+              rows={4}
+              value={overview}
+              onChange={(e) => setOverview(e.target.value)}
+              placeholder="Describe the recruitment drive: shortlisting criteria, number of candidates who appeared, format of rounds, and general atmosphere..."
+              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"
+            />
+          </div>
+
+          {/* Preparation Tips */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Preparation Tips & Advice for Juniors (Optional)
+            </label>
+            <textarea
+              rows={3}
+              value={preparationTips}
+              onChange={(e) => setPreparationTips(e.target.value)}
+              placeholder="Which topics to practice most? Resources used? Advice on answering behavioral / HR questions..."
+              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"
+            />
+          </div>
+
+          {/* Anonymous toggle */}
+          <div className="flex items-center gap-3 pt-2 border-t border-slate-800">
+            <input
+              type="checkbox"
+              id="anonymous"
+              checked={isAnonymous}
+              onChange={(e) => setIsAnonymous(e.target.checked)}
+              className="w-4 h-4 rounded text-indigo-600 bg-slate-950 border-slate-800 focus:ring-indigo-500"
+            />
+            <label htmlFor="anonymous" className="text-xs text-slate-300 flex items-center gap-1.5 cursor-pointer">
+              <EyeOff className="w-3.5 h-3.5 text-indigo-400" />
+              Publish anonymously (your name will be hidden from students, visible only to verified moderators)
+            </label>
+          </div>
+        </section>
+
         {/* Submit CTA */}
         <div className="flex justify-end gap-4 pt-4 border-t border-slate-800">
           <Button
@@ -698,13 +647,6 @@ export const SubmitExperience: React.FC = () => {
           </Button>
         </div>
       </form>
-
-      {/* Inline Modal for Creating New Company */}
-      <AddCompanyModal
-        isOpen={isAddCompanyModalOpen}
-        onClose={() => setIsAddCompanyModalOpen(false)}
-        onCompanyCreated={handleCompanyCreated}
-      />
     </div>
   );
 };

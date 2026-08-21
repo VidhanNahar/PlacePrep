@@ -26,7 +26,36 @@ export const createApp = (): Application => {
   // CORS Configuration
   app.use(
     cors({
-      origin: [env.CLIENT_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+      origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps, curl, server-to-server)
+        if (!origin) return callback(null, true);
+
+        // Normalize configured CLIENT_URL (remove trailing slashes / path)
+        let clientOrigin = env.CLIENT_URL;
+        try {
+          clientOrigin = new URL(env.CLIENT_URL).origin;
+        } catch {
+          // keep original
+        }
+
+        const allowed = [
+          clientOrigin,
+          env.CLIENT_URL,
+          'http://localhost:5173',
+          'http://127.0.0.1:5173',
+          'https://vidhannahar.github.io',
+        ];
+
+        if (
+          allowed.includes(origin) ||
+          origin.endsWith('.github.io') ||
+          origin.startsWith('http://localhost:')
+        ) {
+          return callback(null, true);
+        }
+
+        return callback(null, true);
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id'],
